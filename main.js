@@ -4,7 +4,6 @@ const player = document.getElementById('audioPlayer'); // audio
 const play = document.getElementById('play'); // play button
 const record = document.getElementById('record'); // record button
 const submit = document.getElementById('submit'); // submit button
-const recplay = document.getElementById('playRecorded');
 const submitDiv = document.getElementById('submitDiv');
 const bpm = 85;
 var recordedBlob;
@@ -12,11 +11,6 @@ var audioURL;
 
 record.disabled = true; //disable buttons
 submit.disabled = true;
-
-recplay.onclick = () => {
-  player.src = audioURL;
-  player.play();
-};
 
 play.onclick = () => {
   record.disabled = true;
