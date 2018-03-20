@@ -10,7 +10,7 @@ const bpm = 85;
 var recordedBlob;
 var audioURL;
 
-record.disabled = false; //disable buttons
+record.disabled = true; //disable buttons
 submit.disabled = true;
 
 recplay.onclick = () => {
@@ -33,23 +33,14 @@ record.onclick = () => {
   navigator.mediaDevices.getUserMedia(constraints)
   .then( (stream) => {
     countdown(bpm);
-    //cowntdown() fires an event to the record button when it's done
     record.addEventListener('countdownFinished',
       () => recordUser(stream, recording_duration));
-    //recordUser() also fires an event to the record button when done
     record.addEventListener('recordFinished',
       (data) => {
         audioURL = URL.createObjectURL(data.detail);
         recordedBlob = data.detail;
-        // var a = document.createElement("a");
-        // document.body.appendChild(a);
-        // a.style = "display: none";
-        // a.href = audioURL;
-        // a.download = 'output.ogg';
-        // a.click();
-        // submitDiv.hidden = false;
-        // submit.disabled = false;
-        // console.log(data.detail);
+        submitDiv.hidden = false;
+        submit.disabled = false;
       });
   })
   .catch(
@@ -59,9 +50,22 @@ record.onclick = () => {
 
 submit.onclick = () => {
   //let pcmBuffer = convertToPCM();
-
+  var oReq = new XMLHttpRequest();
+  var url = "http://thiswebsiteisundefined.com/request";
+  var formData = new FormData();
+  formData.append('recordedSound', recordedBlob, 'output.ogg');
+  oReq.open("POST", url, true);
+  oReq.setRequestHeader("Content-Type", "multipart/form-data");
+  oReq.send(formData);
+  oReq.onload = (e) => {
+    console.log("it won't be uploaded anyway.");
+  };
+  oReq.onerror = (e) => {
+    console.log(e);
+  };
 };
 
+//recordUser() also fires an event to the record button when done
 function recordUser(stream, duration) {
   let recordedChunks = [];
   let mimeTypes = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus'];
@@ -97,6 +101,7 @@ function recordUser(stream, duration) {
   };
 }
 
+//cowntdown() fires an event to the record button when it's done
 function countdown(bpm) {
   const bpmToMS = 60/bpm*1000;
   let count = 4;
