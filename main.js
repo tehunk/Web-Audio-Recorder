@@ -11,7 +11,7 @@ var recordedBlob;
 var audioURL;
 
 record.disabled = false; //disable buttons
-submit.disabled = false;
+submit.disabled = true;
 
 recplay.onclick = () => {
   player.src = audioURL;
@@ -41,9 +41,15 @@ record.onclick = () => {
       (data) => {
         audioURL = URL.createObjectURL(data.detail);
         recordedBlob = data.detail;
-        submitDiv.hidden = false;
-        submit.disabled = false;
-        console.log(data.detail);
+        // var a = document.createElement("a");
+        // document.body.appendChild(a);
+        // a.style = "display: none";
+        // a.href = audioURL;
+        // a.download = 'output.ogg';
+        // a.click();
+        // submitDiv.hidden = false;
+        // submit.disabled = false;
+        // console.log(data.detail);
       });
   })
   .catch(
@@ -52,48 +58,7 @@ record.onclick = () => {
 };
 
 submit.onclick = () => {
-  URL.revokeObjectURL(audioURL);
-  const REC_DURATION = Math.ceil(player.duration);
-  const NUM_CHANNEL = 1;
-  const SAMPLERATE = 44100;
-  let offlineCtxOptions = {
-    numberOfChannels: NUM_CHANNEL,
-    length: NUM_CHANNEL*SAMPLERATE*REC_DURATION,
-    sampleRate: SAMPLERATE
-  }
-  const offlineCtx = new OfflineAudioContext(offlineCtxOptions);
-  let reader = new FileReader();
-  reader.readAsArrayBuffer(recordedBlob);
-  reader.onload = () => {
-    offlineCtx.decodeAudioData(reader.result)
-    .then( (decodedData)=> {
-      let source = offlineCtx.createBufferSource();
-      source.buffer = decodedData;
-      source.connect(offlineCtx.destination);
-      source.start();
-      offlineCtx.startRendering()
-      .then( (renderedBuffer) => {
-        console.log(renderedBuffer);
-        console.log(renderedBuffer.getChannelData(0));
-        var pcmBlob = new Blob(renderedBuffer.getChannelData(0), {type: 'audio/wave'});
-        console.log(pcmBlob);
-        audioURL = URL.createObjectURL(pcmBlob);
-        var a = document.createElement("a");
-        document.body.appendChild(a);
-        a.style = "display: none";
-        a.href = audioURL;
-        a.download = 'output.wav';
-        a.click();
-        window.URL.revokeObjectURL(audioURL);
-      })
-      .catch(
-        (err) => { console.log('The following error occurred: ' + err); }
-      );
-    })
-    .catch(
-      (err) => { console.log('The following error occurred: ' + err); }
-    );
-  }
+  //let pcmBuffer = convertToPCM();
 
 };
 
@@ -166,6 +131,38 @@ function countdown(bpm) {
   };
 }
 
-function exportWav(buffer) {
-  return;
+function convertToPCM () {
+  URL.revokeObjectURL(audioURL);
+  const REC_DURATION = Math.ceil(player.duration);
+  const NUM_CHANNEL = 1;
+  const SAMPLERATE = 44100;
+  let offlineCtxOptions = {
+    numberOfChannels: NUM_CHANNEL,
+    length: NUM_CHANNEL*SAMPLERATE*REC_DURATION,
+    sampleRate: SAMPLERATE
+  }
+  const offlineCtx = new OfflineAudioContext(offlineCtxOptions);
+  let reader = new FileReader();
+  reader.readAsArrayBuffer(recordedBlob);
+  reader.onload = () => {
+    offlineCtx.decodeAudioData(reader.result)
+    .then( (decodedData)=> {
+      let source = offlineCtx.createBufferSource();
+      source.buffer = decodedData;
+      source.connect(offlineCtx.destination);
+      source.start();
+      offlineCtx.startRendering()
+      .then( (renderedBuffer) => {
+        console.log(renderedBuffer);
+        console.log(renderedBuffer.getChannelData(0));
+        return renderedBuffer.getChannelData(0);
+      })
+      .catch(
+        (err) => { console.log('The following error occurred: ' + err); }
+      );
+    })
+    .catch(
+      (err) => { console.log('The following error occurred: ' + err); }
+    );
+  };
 }
