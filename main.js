@@ -9,9 +9,14 @@ const bpm = 85;
 var recordedBlob;
 var audioURL;
 
-record.disabled = true; //disable buttons
+//disable buttons
+record.disabled = true;
 submit.disabled = true;
 
+/*
+When the play button is clicked, Reference.mp3 is played
+When the music is finished, the record button is enabled
+*/
 play.onclick = () => {
   record.disabled = true;
   submit.disabled = true;
@@ -19,19 +24,24 @@ play.onclick = () => {
   player.addEventListener('ended', () => {record.disabled = false;});
 };
 
+/*
+When the record button is clicked, it calls countdown() and recordUser().
+Then the blob is created for submission.
+Successful recording enables the submit button and shows the div.
+*/
 record.onclick = () => {
   play.disabled = true;
   submit.disabled = true;
-  const recording_duration = Math.ceil(player.duration);
+  const REC_DURATION = Math.ceil(player.duration);
   const constraints = {audio: true, video: false};
   navigator.mediaDevices.getUserMedia(constraints)
   .then( (stream) => {
     countdown(bpm);
     record.addEventListener('countdownFinished',
-      () => recordUser(stream, recording_duration));
+      () => recordUser(stream, REC_DURATION));
     record.addEventListener('recordFinished',
       (data) => {
-        audioURL = URL.createObjectURL(data.detail);
+        //audioURL = URL.createObjectURL(data.detail);
         recordedBlob = data.detail;
         submitDiv.hidden = false;
         submit.disabled = false;
@@ -42,6 +52,11 @@ record.onclick = () => {
   );
 };
 
+/*
+The submit button creates a formdata containing the recorded blob.
+It then sends the file using post method.
+The server side is not implemented here.
+*/
 submit.onclick = () => {
   //let pcmBuffer = convertToPCM();
   var oReq = new XMLHttpRequest();
@@ -57,11 +72,19 @@ submit.onclick = () => {
   oReq.onerror = (e) => {
     console.log(e);
   };
+  //URL.revokeObjectURL(audioURL);
 };
 
-//recordUser() also fires an event to the record button when done
+/*
+The recordUser() takes mediastream and duration as inputs.
+Currently, there is no way to set specific framerates nor codecs.
+Firefox and Chrome currently support opus codec only.
+The framerate seems to be either 44100 or 44000 depending on platforms.
+recordUser() fires an event to the record button when done
+*/
 function recordUser(stream, duration) {
   let recordedChunks = [];
+  //webm container: chrome, ogg container: firefox
   let mimeTypes = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus'];
   let options = {};
   for (let i=0; i<mimeTypes.length; i++) {
@@ -73,10 +96,9 @@ function recordUser(stream, duration) {
   if (options.mimeType !== "undefined") {
     var mediaRecorder = new MediaRecorder(stream, options);
   } else {
-    return Error("Recording is not supported on this browser.");
+    return Error("No mimeType is supported.");
   }
   mediaRecorder.start(1000);
-  console.log("mediaRecorder started!")
   setTimeout( () => {
     mediaRecorder.stop();
   },
@@ -89,19 +111,22 @@ function recordUser(stream, duration) {
     record.dispatchEvent(evt);
   };
   mediaRecorder.ondataavailable = (event) => {
-    console.log('Recorded chunk of size ' + event.data.size + "B");
-    console.log('type: ' + event.data.type);
+    document.getElementById('countdown').innerHTML = "Recording in process...";
     recordedChunks.push(event.data);
   };
 }
 
-//cowntdown() fires an event to the record button when it's done
+/*
+The countdonw() takes bpm value as an input.
+It uses an oscillatorNode and a gainNode to beep like a metronome.
+It also prints on HTML the number of counts.
+It fires an event to the record button when it's done.
+*/
 function countdown(bpm) {
   const bpmToMS = 60/bpm*1000;
   let count = 4;
   //Currently, setting the sample rate is not working.
   let audioCtx = new AudioContext({sampleRate: 44100});
-  console.log(audioCtx.sampleRate);
   let oscillatorNode = new OscillatorNode(audioCtx, {
     type: 'sine',
     frequency: 1500,
@@ -130,6 +155,12 @@ function countdown(bpm) {
   };
 }
 
+/*
+This function is not used in this demo, but implemented for the future.
+Because modern browsers don't support custom framerates or pcm recording yet,
+Opus codec has to be decoded for pcm data.
+It returns a mono arraybuffer containing float32 PCM.
+*/
 function convertToPCM () {
   URL.revokeObjectURL(audioURL);
   const REC_DURATION = Math.ceil(player.duration);
@@ -152,8 +183,6 @@ function convertToPCM () {
       source.start();
       offlineCtx.startRendering()
       .then( (renderedBuffer) => {
-        console.log(renderedBuffer);
-        console.log(renderedBuffer.getChannelData(0));
         return renderedBuffer.getChannelData(0);
       })
       .catch(
